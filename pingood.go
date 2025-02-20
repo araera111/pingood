@@ -1,26 +1,45 @@
 package main
 
 import (
-	"bufio"
-	"flag"
-	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
+"bufio"
+"flag"
+"fmt"
+"log"
+"os"
+"path/filepath"
+"strconv"
+"strings"
+"time"
 
-	"pingood/logger"
-	"pingood/ping"
+"pingood/logger"
+"pingood/ping"
 )
 
 func readInput(prompt string) string {
-	fmt.Print(prompt)
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		return scanner.Text()
-	}
-	return ""
+fmt.Print(prompt)
+scanner := bufio.NewScanner(os.Stdin)
+if scanner.Scan() {
+return scanner.Text()
+}
+return ""
+}
+
+// askYesNo はYes/No形式の質問を行い、ユーザーの回答を返します
+func askYesNo(prompt string, defaultYes bool) bool {
+defaultChoice := "n"
+if defaultYes {
+defaultChoice = "y"
+}
+fmt.Printf("%s [y/N]: ", prompt)
+scanner := bufio.NewScanner(os.Stdin)
+if scanner.Scan() {
+input := strings.ToLower(strings.TrimSpace(scanner.Text()))
+if input == "" {
+return defaultYes
+}
+return input == "y" || input == "yes"
+}
+return defaultYes
 }
 
 func main() {
@@ -101,25 +120,56 @@ func main() {
 		}
 	}
 
-	// ロガーの初期化
+	// ファイルアップロード機能の確認
 	var opts *logger.LoggerOptions
-	if *upload {
-		opts = &logger.LoggerOptions{
-			ConfigPath: *configPath,
-		}
-
-		// 既存のログファイルをチェック
-		for _, logPath := range logPaths {
-			if info, err := os.Stat(logPath); err == nil && info.Size() > 0 {
-				fmt.Printf("既存のログファイル '%s' が見つかりました（サイズ: %d bytes）\n", logPath, info.Size())
-				fmt.Print("このログファイルをアップロードしますか？ [y/N]: ")
-				scanner := bufio.NewScanner(os.Stdin)
-				if scanner.Scan() && strings.ToLower(scanner.Text()) == "y" {
-					opts.UploadExisting = true
-					break
-				}
-			}
-		}
+	if *upload || (!flag.Lookup("upload").Changed && askYesNo("ファイルアップロード機能を使用しますか？", false)) {
+	// 設定ファイルのリストを取得
+	var tomlFiles []string
+	entries, err := os.ReadDir(".")
+	if err == nil {
+	for _, entry := range entries {
+	if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".toml") {
+	tomlFiles = append(tomlFiles, entry.Name())
+	}
+	}
+	}
+	
+	// 設定ファイルの選択
+	var selectedConfig string
+	if len(tomlFiles) > 0 {
+	fmt.Println("\n利用可能な設定ファイル:")
+	for i, file := range tomlFiles {
+	fmt.Printf("%d: %s\n", i+1, file)
+	}
+	fmt.Print("使用する設定ファイルの番号を選択してください: ")
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+	if num, err := strconv.Atoi(scanner.Text()); err == nil && num > 0 && num <= len(tomlFiles) {
+	selectedConfig = tomlFiles[num-1]
+	*configPath = selectedConfig
+	}
+	}
+	}
+	
+	if selectedConfig == "" {
+	*configPath = "config.toml"
+	fmt.Printf("デフォルトの設定ファイル '%s' を使用します\n", *configPath)
+	}
+	
+	opts = &logger.LoggerOptions{
+	ConfigPath: *configPath,
+	}
+	
+	// 既存のログファイルをチェック
+	for _, logPath := range logPaths {
+	if info, err := os.Stat(logPath); err == nil && info.Size() > 0 {
+	fmt.Printf("既存のログファイル '%s' が見つかりました（サイズ: %d bytes）\n", logPath, info.Size())
+	if askYesNo("このログファイルをアップロードしますか？", false) {
+	opts.UploadExisting = true
+	break
+	}
+	}
+	}
 	}
 
 	l, err := logger.NewLogger(logPaths, opts)

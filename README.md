@@ -41,11 +41,19 @@ Ping実行間隔を秒単位で入力してください（デフォルト: 5）:
 ### S3/MinIOアップロード機能の使用
 
 ```bash
-# S3アップロード機能を有効にして実行
-pingood -target example.com -upload -config config.toml
+# S3アップロード機能を有効にして実行（対話的な設定）
+pingood -target example.com
+対象のURLまたはIPアドレスを入力してください: example.com
+ファイルアップロード機能を使用しますか？ [y/N]: y
 
-# 設定ファイルを指定して実行
-pingood -target example.com -upload -config custom_config.toml
+利用可能な設定ファイル:
+1: config.toml
+2: production.toml
+3: development.toml
+使用する設定ファイルの番号を選択してください: 1
+
+# または直接指定して実行
+pingood -target example.com -upload -config config.toml
 ```
 
 アップロード機能を有効にすると、以下の機能が利用可能になります：
