@@ -3,9 +3,9 @@ package logger
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
-	"path/filepath"
 
 	"github.com/robfig/cron/v3"
 	"pingood/ping"
@@ -13,13 +13,13 @@ import (
 
 // Logger handles logging of ping results with optional S3 uploads
 type Logger struct {
-	files       []*os.File
-	errorFiles  map[string]*os.File // エラーログファイル
-	paths       []string
-	uploader    *S3Uploader // オプショナル
-	config      *Config     // オプショナル
-	cron        *cron.Cron  // オプショナル
-	mu       sync.Mutex
+	files      []*os.File
+	errorFiles map[string]*os.File // エラーログファイル
+	paths      []string
+	uploader   *S3Uploader // オプショナル
+	config     *Config     // オプショナル
+	cron       *cron.Cron  // オプショナル
+	mu         sync.Mutex
 }
 
 // LoggerOptions はロガーの設定オプションを定義します
@@ -98,12 +98,12 @@ func NewLogger(paths []string, opts *LoggerOptions) (*Logger, error) {
 	}
 
 	l := &Logger{
-		files:       files,
-		errorFiles:  errorFiles,
-		paths:       paths,
-		uploader:    uploader,
-		config:      config,
-		cron:        cronJob,
+		files:      files,
+		errorFiles: errorFiles,
+		paths:      paths,
+		uploader:   uploader,
+		config:     config,
+		cron:       cronJob,
 	}
 
 	// S3アップロード機能が有効な場合のみスケジュール設定
@@ -148,22 +148,22 @@ func (l *Logger) scheduleUpload() error {
 
 // uploadLogs uploads all log files to S3
 func (l *Logger) uploadLogs() {
- l.mu.Lock()
- defer l.mu.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
- for _, path := range l.paths {
-  if err := l.uploader.UploadFile(path); err != nil {
-   fmt.Fprintf(os.Stderr, "ログファイルのアップロードに失敗しました %s: %v\n", path, err)
-  }
+	for _, path := range l.paths {
+		if err := l.uploader.UploadFile(path); err != nil {
+			fmt.Fprintf(os.Stderr, "ログファイルのアップロードに失敗しました %s: %v\n", path, err)
+		}
 
-  // エラーログファイルのアップロード
-  errorFilePath := getErrorLogFilePath(path)
-  if _, err := os.Stat(errorFilePath); err == nil { // ファイルが存在する場合のみアップロード
-   if err := l.uploader.UploadFile(errorFilePath); err != nil {
-    fmt.Fprintf(os.Stderr, "エラーログファイルのアップロードに失敗しました %s: %v\n", errorFilePath, err)
-   }
-  }
- }
+		// エラーログファイルのアップロード
+		errorFilePath := getErrorLogFilePath(path)
+		if _, err := os.Stat(errorFilePath); err == nil { // ファイルが存在する場合のみアップロード
+			if err := l.uploader.UploadFile(errorFilePath); err != nil {
+				fmt.Fprintf(os.Stderr, "エラーログファイルのアップロードに失敗しました %s: %v\n", errorFilePath, err)
+			}
+		}
+	}
 }
 
 // UploadNow triggers an immediate upload of all log files to S3
@@ -265,16 +265,16 @@ func (l *Logger) LogError(index int, target string, err error) error {
 
 	switch errorLogMode {
 	case "same":
-	  _, err = l.files[index].WriteString(logLine)
-	  if err != nil {
-	   return err
-	  }
+		_, err = l.files[index].WriteString(logLine)
+		if err != nil {
+			return err
+		}
 	case "both":
-	  _, err = l.files[index].WriteString(logLine)
-	  if err != nil {
-	   return err
-	  }
-	  _, err = l.errorFiles[l.paths[index]].WriteString(logLine)
+		_, err = l.files[index].WriteString(logLine)
+		if err != nil {
+			return err
+		}
+		_, err = l.errorFiles[l.paths[index]].WriteString(logLine)
 		if err != nil {
 			return err
 		}

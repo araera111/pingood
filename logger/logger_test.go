@@ -23,10 +23,10 @@ func TestLogError(t *testing.T) {
 
 	// Loggerを初期化
 	logger := &Logger{
-		files: []*os.File{},
+		files:      []*os.File{},
 		errorFiles: map[string]*os.File{},
-		paths: []string{logFilePath},
-		config: config,
+		paths:      []string{logFilePath},
+		config:     config,
 	}
 
 	// ファイルを作成
@@ -97,10 +97,10 @@ func TestLogErrorModeSame(t *testing.T) {
 
 	// Loggerを初期化
 	logger := &Logger{
-		files: []*os.File{},
+		files:      []*os.File{},
 		errorFiles: map[string]*os.File{},
-		paths: []string{logFilePath},
-		config: config,
+		paths:      []string{logFilePath},
+		config:     config,
 	}
 
 	// ファイルを作成
@@ -171,10 +171,10 @@ func TestLogErrorModeError(t *testing.T) {
 
 	// Loggerを初期化
 	logger := &Logger{
-		files: []*os.File{},
+		files:      []*os.File{},
 		errorFiles: map[string]*os.File{},
-		paths: []string{logFilePath},
-		config: config,
+		paths:      []string{logFilePath},
+		config:     config,
 	}
 
 	// ファイルを作成
@@ -245,10 +245,10 @@ func TestLogErrorModeOther(t *testing.T) {
 
 	// Loggerを初期化
 	logger := &Logger{
-		files: []*os.File{},
+		files:      []*os.File{},
 		errorFiles: map[string]*os.File{},
-		paths: []string{logFilePath},
-		config: config,
+		paths:      []string{logFilePath},
+		config:     config,
 	}
 
 	// ファイルを作成

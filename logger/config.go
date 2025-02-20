@@ -10,8 +10,8 @@ import (
 
 // Config はアプリケーション全体の設定を保持します
 type Config struct {
-	LogFiles      []string `toml:"log_files"`
-	S3            S3Config `toml:"s3"`
+	LogFiles     []string `toml:"log_files"`
+	S3           S3Config `toml:"s3"`
 	ErrorLogMode string   `toml:"error_log_mode"`
 }
 

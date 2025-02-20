@@ -36,28 +36,28 @@ func TestParseYesNoResponse(t *testing.T) {
 
 func TestFormatYesNoPrompt(t *testing.T) {
 	tests := []struct {
-		name      string
-		prompt    string
+		name       string
+		prompt     string
 		defaultYes bool
-		want      string
+		want       string
 	}{
 		{
-			name:      "Default yes",
-			prompt:    "Continue?",
+			name:       "Default yes",
+			prompt:     "Continue?",
 			defaultYes: true,
-			want:      "Continue? [Y/n]: ",
+			want:       "Continue? [Y/n]: ",
 		},
 		{
-			name:      "Default no",
-			prompt:    "Continue?",
+			name:       "Default no",
+			prompt:     "Continue?",
 			defaultYes: false,
-			want:      "Continue? [y/N]: ",
+			want:       "Continue? [y/N]: ",
 		},
 		{
-			name:      "Empty prompt with default yes",
-			prompt:    "",
+			name:       "Empty prompt with default yes",
+			prompt:     "",
 			defaultYes: true,
-			want:      " [Y/n]: ",
+			want:       " [Y/n]: ",
 		},
 	}
 
