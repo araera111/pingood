@@ -4,6 +4,9 @@ log_files = [
     "error.log"
 ]
 
+# ロガーの設定
+error_log_mode = "both" # "same", "both", "error"
+
 # S3アップロードの設定
 [s3]
 # AWS認証情報

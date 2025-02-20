@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"path/filepath"
 
 	"github.com/robfig/cron/v3"
 	"pingood/ping"
@@ -12,11 +13,12 @@ import (
 
 // Logger handles logging of ping results with optional S3 uploads
 type Logger struct {
-	files    []*os.File
-	paths    []string
-	uploader *S3Uploader // オプショナル
-	config   *Config     // オプショナル
-	cron     *cron.Cron  // オプショナル
+	files       []*os.File
+	errorFiles  map[string]*os.File // エラーログファイル
+	paths       []string
+	uploader    *S3Uploader // オプショナル
+	config      *Config     // オプショナル
+	cron        *cron.Cron  // オプショナル
 	mu       sync.Mutex
 }
 
@@ -29,6 +31,7 @@ type LoggerOptions struct {
 // NewLogger creates a new Logger instance
 func NewLogger(paths []string, opts *LoggerOptions) (*Logger, error) {
 	var files []*os.File
+	var errorFiles = make(map[string]*os.File)
 	var uploader *S3Uploader
 	var config *Config
 	var cronJob *cron.Cron
@@ -44,6 +47,17 @@ func NewLogger(paths []string, opts *LoggerOptions) (*Logger, error) {
 			return nil, fmt.Errorf("ログファイルのオープンに失敗しました %s: %v", path, err)
 		}
 		files = append(files, file)
+
+		// エラーログファイルを開く
+		errorFilePath := getErrorLogFilePath(path)
+		errorFile, err := os.OpenFile(errorFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			for _, f := range files {
+				f.Close()
+			}
+			return nil, fmt.Errorf("エラーログファイルのオープンに失敗しました %s: %v", errorFilePath, err)
+		}
+		errorFiles[path] = errorFile
 	}
 
 	// S3アップロード機能の初期化（オプショナル）
@@ -84,11 +98,12 @@ func NewLogger(paths []string, opts *LoggerOptions) (*Logger, error) {
 	}
 
 	l := &Logger{
-		files:    files,
-		paths:    paths,
-		uploader: uploader,
-		config:   config,
-		cron:     cronJob,
+		files:       files,
+		errorFiles:  errorFiles,
+		paths:       paths,
+		uploader:    uploader,
+		config:      config,
+		cron:        cronJob,
 	}
 
 	// S3アップロード機能が有効な場合のみスケジュール設定
@@ -133,14 +148,22 @@ func (l *Logger) scheduleUpload() error {
 
 // uploadLogs uploads all log files to S3
 func (l *Logger) uploadLogs() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+ l.mu.Lock()
+ defer l.mu.Unlock()
 
-	for _, path := range l.paths {
-		if err := l.uploader.UploadFile(path); err != nil {
-			fmt.Fprintf(os.Stderr, "ログファイルのアップロードに失敗しました %s: %v\n", path, err)
-		}
-	}
+ for _, path := range l.paths {
+  if err := l.uploader.UploadFile(path); err != nil {
+   fmt.Fprintf(os.Stderr, "ログファイルのアップロードに失敗しました %s: %v\n", path, err)
+  }
+
+  // エラーログファイルのアップロード
+  errorFilePath := getErrorLogFilePath(path)
+  if _, err := os.Stat(errorFilePath); err == nil { // ファイルが存在する場合のみアップロード
+   if err := l.uploader.UploadFile(errorFilePath); err != nil {
+    fmt.Fprintf(os.Stderr, "エラーログファイルのアップロードに失敗しました %s: %v\n", errorFilePath, err)
+   }
+  }
+ }
 }
 
 // UploadNow triggers an immediate upload of all log files to S3
@@ -212,6 +235,13 @@ func (l *Logger) LogSuccess(index int, target string, result *ping.PingResult) e
 	return err
 }
 
+func getErrorLogFilePath(logFilePath string) string {
+	dir, file := filepath.Split(logFilePath)
+	ext := filepath.Ext(file)
+	base := file[:len(file)-len(ext)]
+	return filepath.Join(dir, base+".error.log")
+}
+
 // LogError logs a failed ping attempt to the specified file index
 func (l *Logger) LogError(index int, target string, err error) error {
 	if index < 0 || index >= len(l.files) {
@@ -228,6 +258,42 @@ func (l *Logger) LogError(index int, target string, err error) error {
 		target,
 		err)
 
-	_, err = l.files[index].WriteString(logLine)
+	errorLogMode := l.config.ErrorLogMode
+	if errorLogMode == "" {
+		errorLogMode = "both" // デフォルトはboth
+	}
+
+	switch errorLogMode {
+	case "same":
+	  _, err = l.files[index].WriteString(logLine)
+	  if err != nil {
+	   return err
+	  }
+	case "both":
+	  _, err = l.files[index].WriteString(logLine)
+	  if err != nil {
+	   return err
+	  }
+	  _, err = l.errorFiles[l.paths[index]].WriteString(logLine)
+		if err != nil {
+			return err
+		}
+	case "error":
+		_, err = l.errorFiles[l.paths[index]].WriteString(logLine)
+		if err != nil {
+			return err
+		}
+	default:
+		// 不正な設定の場合は、両方のログに書き出す
+		_, err = l.files[index].WriteString(logLine)
+		if err != nil {
+			return err
+		}
+		_, err = l.errorFiles[l.paths[index]].WriteString(logLine)
+		if err != nil {
+			return err
+		}
+	}
+
 	return err
 }
