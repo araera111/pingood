@@ -1,0 +1,48 @@
+# ログファイルの設定
+log_files = [
+    "ping.log",
+    "error.log"
+]
+
+# S3アップロードの設定
+[s3]
+# AWS認証情報
+access_key = "YOUR_ACCESS_KEY"
+secret_key = "YOUR_SECRET_KEY"
+
+# S3の基本設定
+region = "ap-northeast-1"
+bucket = "pingood"
+key_prefix = "logs/ping"
+
+# MinIO等の代替S3互換ストレージ設定
+# 設定例：
+# AWS S3を使用する場合:
+# endpoint = ""                 # 空欄または設定自体を省略
+# force_path_style = false     # 省略可能
+# tls = true                   # 省略可能
+
+# MinIOを使用する場合:
+# endpoint = "http://localhost:9000"
+# force_path_style = true
+# tls = false
+
+# スケジュール設定
+# 以下のいずれかを使用（scheduleが優先）
+
+# 1. cron式でスケジュール指定（推奨）
+schedule = "* * * * *"  # 毎時0分
+# よく使うcron式の例：
+# "*/10 * * * *"    - 10分おき
+# "0 * * * *"       - 毎時0分
+# "0 */2 * * *"     - 2時間おき
+# "0 0 * * *"       - 毎日0時
+# "0 3 * * 1-5"     - 平日の3時
+# "0 0 */3 * *"     - 3日おきの0時
+# "*/30 9-17 * * *" - 営業時間内の30分おき（9時-17時）
+
+# 2. 単純な時刻指定（後方互換用）
+upload_time = "23:00"  # HH:MM形式
+
+# アップロード後にログファイルを削除するかどうか
+delete_after = false
