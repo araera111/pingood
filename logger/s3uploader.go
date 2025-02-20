@@ -104,12 +104,16 @@ func (u *S3Uploader) UploadFile(filePath string) error {
 	}
 	defer file.Close()
 
-	// S3のキーを生成（プレフィックス + 日付 + ファイル名）
+	// S3のキーを生成（プレフィックス + 日付 + ファイル名_タイムスタンプ）
 	now := time.Now()
-	key := fmt.Sprintf("%s/%s/%s",
-		u.config.KeyPrefix,
-		now.Format("2006/01/02"),
-		filepath.Base(filePath),
+	baseFileName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+	ext := filepath.Ext(filePath)
+	key := fmt.Sprintf("%s/%s/%s_%s%s",
+	u.config.KeyPrefix,
+	now.Format("2006/01/02"),
+	baseFileName,
+	now.Format("2006_01_02_15_04_05"),
+	ext,
 	)
 
 	// S3にアップロード

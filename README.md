@@ -111,9 +111,11 @@ delete_after = false                  # アップロード後にログファイ�
 
 アップロードされるログファイルは以下の形式で保存されます：
 ```
-{key_prefix}/{YYYY}/{MM}/{DD}/{filename}
+{key_prefix}/{YYYY}/{MM}/{DD}/{basename}_{YYYY_MM_DD_HH_mm_ss}{ext}
 ```
-例：`logs/ping/2025/02/20/example.log`
+例：`logs/ping/2025/02/20/example_2025_02_20_15_04_05.log`
+
+タイムスタンプはアップロード時の時刻が使用され、同じファイルが上書きされることを防ぎます。
 
 ## 要件
 
